@@ -66,6 +66,10 @@ CREATE TABLE job_applications (
     job_offer_id INT NOT NULL,
     status ENUM('PENDING', 'ACCEPTED', 'REJECTED') NOT NULL DEFAULT 'PENDING',
     applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    cover_letter TEXT,
+    phone VARCHAR(30),
+    availability_date DATE,
+    expected_salary VARCHAR(50),
 
     CONSTRAINT fk_application_student
         FOREIGN KEY (student_id)
