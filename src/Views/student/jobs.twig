@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offres d'emploi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <header class="bg-white border-b">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div>
+                <h1 class="text-xl font-semibold text-gray-900">Offres d'emploi</h1>
+                <p class="text-sm text-gray-500">Consultez et postulez aux annonces disponibles</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="showMyApplications()" class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm hover:bg-indigo-700">
+                    Mes candidatures
+                </button>
+                <form method="POST" action="/logout">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button class="px-4 py-2 rounded-lg bg-gray-900 text-white text-sm hover:bg-gray-800">Déconnexion</button>
+                </form>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-6">
+        {% set succ = success() %}
+        {% if succ %}
+            <div class="mb-4 bg-green-50 border border-green-200 rounded-lg p-4 text-sm text-green-800">{{ succ }}</div>
+        {% endif %}
+
+        {% set errs = errors() %}
+        {% if errs %}
+            <div class="mb-4 bg-red-50 border border-red-200 rounded-lg p-4">
+                <div class="text-sm font-medium text-red-800 mb-2">Erreurs</div>
+                <ul class="list-disc pl-5 text-sm text-red-700 space-y-1">
+                    {% for error in errs %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        {% if hasAcceptedApplication %}
+            <div class="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="text-sm text-blue-800">
+                    <strong>Information:</strong> Vous avez une candidature acceptée. Vous ne pouvez plus postuler à d'autres offres.
+                </div>
+            </div>
+        {% endif %}
+
+        <section class="bg-white rounded-xl border p-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Recherche</label>
+                    <input id="q" type="text" value="{{ filters.q }}" placeholder="Titre, entreprise, description..."
+                        class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Entreprise</label>
+                    <select id="company_id" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">Toutes</option>
+                        {% for c in companiesWithOffers %}
+                            <option value="{{ c.id }}" {% if filters.company_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Type de contrat</label>
+                    <select id="contract_type" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">Tous</option>
+                        {% for ct in contractTypes %}
+                            <option value="{{ ct }}" {% if filters.contract_type == ct %}selected{% endif %}>{{ ct }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-lg font-semibold text-gray-900">Résultats</h2>
+                <div id="count" class="text-sm text-gray-500"></div>
+            </div>
+
+            <div id="offers" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% for offer in offers %}
+                    <a href="/student/jobs/{{ offer.id }}" class="block bg-white border rounded-xl p-4 hover:shadow-sm transition">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <div class="text-base font-semibold text-gray-900">{{ offer.title }}</div>
+                                <div class="text-sm text-gray-600 mt-1">{{ offer.company_name }}</div>
+                            </div>
+                            <div class="text-xs text-gray-500 whitespace-nowrap">{{ offer.created_at|default('') }}</div>
+                        </div>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <span class="px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">{{ offer.contract_type }}</span>
+                            <span class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">{{ offer.location }}</span>
+                        </div>
+                    </a>
+                {% else %}
+                    <div class="col-span-full bg-white border rounded-xl p-6 text-center text-gray-600">
+                        Aucune offre trouvée.
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal pour les candidatures -->
+    <div id="applicationsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
+                <div class="p-6 border-b">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-xl font-semibold text-gray-900">Mes candidatures</h2>
+                        <button onclick="closeApplicationsModal()" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6 overflow-y-auto max-h-[60vh]">
+                    <div id="applicationsContent" class="space-y-4">
+                        <!-- Le contenu sera chargé ici -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const qEl = document.getElementById('q');
+        const companyEl = document.getElementById('company_id');
+        const contractEl = document.getElementById('contract_type');
+        const offersEl = document.getElementById('offers');
+        const countEl = document.getElementById('count');
+
+        function escapeHtml(str) {
+            return String(str)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        function renderOffers(offers) {
+            if (!offers || offers.length === 0) {
+                offersEl.innerHTML = `
+                    <div class="col-span-full bg-white border rounded-xl p-6 text-center text-gray-600">
+                        Aucune offre trouvée.
+                    </div>
+                `;
+                countEl.textContent = '0 offre';
+                return;
+            }
+
+            countEl.textContent = `${offers.length} offre${offers.length > 1 ? 's' : ''}`;
+
+            offersEl.innerHTML = offers.map(o => {
+                const id = o.id;
+                const title = escapeHtml(o.title || '');
+                const company = escapeHtml(o.company_name || '');
+                const contract = escapeHtml(o.contract_type || '');
+                const location = escapeHtml(o.location || '');
+                const createdAt = escapeHtml(o.created_at || '');
+
+                return `
+                    <a href="/student/jobs/${id}" class="block bg-white border rounded-xl p-4 hover:shadow-sm transition">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <div class="text-base font-semibold text-gray-900">${title}</div>
+                                <div class="text-sm text-gray-600 mt-1">${company}</div>
+                            </div>
+                            <div class="text-xs text-gray-500 whitespace-nowrap">${createdAt}</div>
+                        </div>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <span class="px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">${contract}</span>
+                            <span class="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">${location}</span>
+                        </div>
+                    </a>
+                `;
+            }).join('');
+        }
+
+        async function fetchOffers() {
+            const params = new URLSearchParams({
+                q: qEl.value || '',
+                company_id: companyEl.value || '',
+                contract_type: contractEl.value || '',
+            });
+
+            const res = await fetch(`/student/jobs/search?${params.toString()}`, {
+                headers: { 'Accept': 'application/json' }
+            });
+
+            if (!res.ok) {
+                return;
+            }
+
+            const data = await res.json();
+            renderOffers(data.offers || []);
+        }
+
+        let t;
+        function debounceFetch() {
+            clearTimeout(t);
+            t = setTimeout(fetchOffers, 250);
+        }
+
+        qEl.addEventListener('input', debounceFetch);
+        companyEl.addEventListener('change', fetchOffers);
+        contractEl.addEventListener('change', fetchOffers);
+
+        renderOffers({{ offers|json_encode|raw }});
+
+        // Fonctions pour le modal des candidatures
+        async function showMyApplications() {
+            console.log('Bouton cliqué - début de la fonction');
+            try {
+                console.log('Envoi de la requête...');
+                const res = await fetch('/student/my-applications', {
+                    headers: { 'Accept': 'application/json' }
+                });
+
+                console.log('Réponse reçue:', res.status);
+
+                if (!res.ok) {
+                    console.error('Erreur lors du chargement des candidatures:', res.status, res.statusText);
+                    alert('Erreur lors du chargement des candidatures');
+                    return;
+                }
+
+                const data = await res.json();
+                console.log('Données reçues:', data);
+                displayApplications(data.applications || []);
+                document.getElementById('applicationsModal').classList.remove('hidden');
+                console.log('Modal affiché');
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur de connexion: ' + error.message);
+            }
+        }
+
+        function closeApplicationsModal() {
+            document.getElementById('applicationsModal').classList.add('hidden');
+        }
+
+        function displayApplications(applications) {
+            const content = document.getElementById('applicationsContent');
+            
+            if (applications.length === 0) {
+                content.innerHTML = `
+                    <div class="text-center py-8 text-gray-600">
+                        <svg class="w-12 h-12 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <p>Vous n'avez pas encore postulé à des offres.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            content.innerHTML = applications.map(app => {
+                const statusColor = app.status === 'ACCEPTED' ? 'green' : 
+                                  app.status === 'REJECTED' ? 'red' : 'yellow';
+                const statusText = app.status === 'ACCEPTED' ? 'Acceptée' : 
+                                 app.status === 'REJECTED' ? 'Refusée' : 'En attente';
+                
+                return `
+                    <div class="border rounded-lg p-4">
+                        <div class="flex items-start justify-between mb-3">
+                            <div>
+                                <h3 class="font-semibold text-gray-900">${escapeHtml(app.job_title)}</h3>
+                                <p class="text-sm text-gray-600">${escapeHtml(app.company_name)} • ${escapeHtml(app.job_location)}</p>
+                            </div>
+                            <span class="px-2 py-1 rounded-full text-xs font-medium bg-${statusColor}-100 text-${statusColor}-800">
+                                ${statusText}
+                            </span>
+                        </div>
+                        
+                        <div class="space-y-2 text-sm">
+                            ${app.cover_letter ? `
+                                <div>
+                                    <span class="font-medium text-gray-700">Lettre de motivation:</span>
+                                    <p class="text-gray-600 mt-1">${escapeHtml(app.cover_letter)}</p>
+                                </div>
+                            ` : ''}
+                            
+                            ${app.phone ? `
+                                <div>
+                                    <span class="font-medium text-gray-700">Téléphone:</span>
+                                    <span class="text-gray-600">${escapeHtml(app.phone)}</span>
+                                </div>
+                            ` : ''}
+                            
+                            ${app.availability_date ? `
+                                <div>
+                                    <span class="font-medium text-gray-700">Disponibilité:</span>
+                                    <span class="text-gray-600">${new Date(app.availability_date).toLocaleDateString('fr-FR')}</span>
+                                </div>
+                            ` : ''}
+                            
+                            ${app.expected_salary ? `
+                                <div>
+                                    <span class="font-medium text-gray-700">Salaire attendu:</span>
+                                    <span class="text-gray-600">${escapeHtml(app.expected_salary)}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                        
+                        <div class="mt-3 pt-3 border-t text-xs text-gray-500">
+                            Postulé le ${new Date(app.applied_at).toLocaleDateString('fr-FR')} à ${new Date(app.applied_at).toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Fermer le modal en cliquant en dehors
+        document.getElementById('applicationsModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeApplicationsModal();
+            }
+        });
+    </script>
+</body>
+</html>
