@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ offer.title }} - Détails</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <header class="bg-white border-b">
+        <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+            <a href="/student/jobs" class="text-sm text-indigo-600 hover:text-indigo-700">← Retour aux offres</a>
+            <form method="POST" action="/logout">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="px-4 py-2 rounded-lg bg-gray-900 text-white text-sm hover:bg-gray-800">Déconnexion</button>
+            </form>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-6">
+        {% set succ = success() %}
+        {% if succ %}
+            <div class="mb-4 bg-green-50 border border-green-200 rounded-lg p-4 text-sm text-green-800">{{ succ }}</div>
+        {% endif %}
+
+        {% set errs = errors() %}
+        {% if errs %}
+            <div class="mb-4 bg-red-50 border border-red-200 rounded-lg p-4">
+                <div class="text-sm font-medium text-red-800 mb-2">Erreurs</div>
+                <ul class="list-disc pl-5 text-sm text-red-700 space-y-1">
+                    {% for error in errs %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        <section class="bg-white border rounded-2xl p-6">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">{{ offer.title }}</h1>
+                    <div class="mt-1 text-gray-600">{{ offer.company_name }} • {{ offer.location }} • {{ offer.contract_type }}</div>
+                </div>
+                <div class="text-xs text-gray-500 whitespace-nowrap">{{ offer.created_at|default('') }}</div>
+            </div>
+
+            <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="md:col-span-2">
+                    <h2 class="text-sm font-semibold text-gray-900 mb-2">Description</h2>
+                    <div class="prose max-w-none text-sm text-gray-700 whitespace-pre-line">{{ offer.description }}</div>
+
+                    {% if offer.skills %}
+                        <h2 class="text-sm font-semibold text-gray-900 mt-6 mb-2">Compétences</h2>
+                        <div class="text-sm text-gray-700 whitespace-pre-line">{{ offer.skills }}</div>
+                    {% endif %}
+                </div>
+
+                <aside class="bg-gray-50 border rounded-xl p-4">
+                    <h3 class="text-sm font-semibold text-gray-900">Entreprise</h3>
+                    <div class="mt-2 flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-semibold">
+                            {{ offer.company_avatar|default(offer.company_name|slice(0,2)|upper) }}
+                        </div>
+                        <div>
+                            <div class="text-sm font-medium text-gray-900">{{ offer.company_name }}</div>
+                            <div class="text-xs text-gray-500">{{ offer.company_sector|default('') }}</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 text-sm text-gray-700 space-y-2">
+                        <div><span class="font-medium">Localisation:</span> {{ offer.company_location|default(offer.location) }}</div>
+                        {% if offer.company_email %}
+                            <div><span class="font-medium">Email:</span> {{ offer.company_email }}</div>
+                        {% endif %}
+                        {% if offer.company_phone %}
+                            <div><span class="font-medium">Téléphone:</span> {{ offer.company_phone }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mt-6">
+                        {% if hasApplied %}
+                            <button disabled class="w-full px-4 py-2 rounded-lg bg-gray-300 text-gray-700 text-sm cursor-not-allowed">
+                                Déjà postulé
+                            </button>
+                        {% elseif hasAcceptedApplication %}
+                            <button disabled class="w-full px-4 py-2 rounded-lg bg-gray-300 text-gray-700 text-sm cursor-not-allowed">
+                                Vous avez une candidature acceptée
+                            </button>
+                            <p class="text-xs text-gray-500 mt-2">Vous ne pouvez plus postuler à d'autres offres car vous avez déjà une candidature acceptée.</p>
+                        {% else %}
+                            <div class="border-t pt-4">
+                                <h4 class="text-sm font-semibold text-gray-900 mb-3">Postuler à cette offre</h4>
+                                <form method="POST" action="/student/apply" class="space-y-3">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <input type="hidden" name="job_offer_id" value="{{ offer.id }}">
+                                    
+                                    <div>
+                                        <label for="cover_letter" class="block text-sm font-medium text-gray-700 mb-1">
+                                            Lettre de motivation *
+                                        </label>
+                                        <textarea 
+                                            id="cover_letter" 
+                                            name="cover_letter" 
+                                            rows="4" 
+                                            required
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                                            placeholder="Présentez-vous et expliquez pourquoi vous êtes intéressé par cette offre..."
+                                        ></textarea>
+                                    </div>
+
+                                    <div>
+                                        <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">
+                                            Téléphone
+                                        </label>
+                                        <input 
+                                            type="tel" 
+                                            id="phone" 
+                                            name="phone" 
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                                            placeholder="Votre numéro de téléphone"
+                                        >
+                                    </div>
+
+                                    <div>
+                                        <label for="availability_date" class="block text-sm font-medium text-gray-700 mb-1">
+                                            Date de disponibilité
+                                        </label>
+                                        <input 
+                                            type="date" 
+                                            id="availability_date" 
+                                            name="availability_date" 
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                                        >
+                                    </div>
+
+                                    <div>
+                                        <label for="expected_salary" class="block text-sm font-medium text-gray-700 mb-1">
+                                            Salaire attendu
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            id="expected_salary" 
+                                            name="expected_salary" 
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                                            placeholder="Ex: 25000€ annuel, 25€/heure..."
+                                        >
+                                    </div>
+
+                                    <button type="submit" class="w-full px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm hover:bg-indigo-700">
+                                        Envoyer ma candidature
+                                    </button>
+                                    
+                                    <p class="text-xs text-gray-500">Vous pouvez postuler à plusieurs offres tant qu'aucune n'est acceptée.</p>
+                                </form>
+                            </div>
+                        {% endif %}
+                    </div>
+                </aside>
+            </div>
+        </section>
+    </main>
+</body>
+</html>
