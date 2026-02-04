@@ -125,15 +125,13 @@ class StudentController extends BaseController
         }
 
         $studentId = (int) $user['id'];
-        
-        // Vérifier si l'étudiant a déjà postulé à cette offre
+
         if ($this->jobApplicationModel->hasApplied($studentId, $jobOfferId)) {
             Session::flash('errors', ['Vous avez déjà postulé à cette offre']);
             $this->redirect('/student/jobs/' . $jobOfferId);
             return;
         }
 
-        // Vérifier si l'étudiant a déjà une candidature acceptée
         if ($this->jobApplicationModel->hasAcceptedApplication($studentId)) {
             Session::flash('errors', ['Vous avez déjà une candidature acceptée. Vous ne pouvez plus postuler à d\'autres offres.']);
             $this->redirect('/student/jobs/' . $jobOfferId);
@@ -167,7 +165,7 @@ class StudentController extends BaseController
             if ($details && (strpos($details, "doesn't exist") !== false || strpos($details, 'Base table or view not found') !== false)) {
                 Session::flash('errors', ['Table job_applications manquante dans la base de données. Exécute le SQL de création de table, puis réessaie.']);
             } elseif ($details) {
-                Session::flash('errors', ["Erreur lors de l'envoi de la candidature: {$details}"]); 
+                Session::flash('errors', ["Erreur lors de l'envoi de la candidature: {$details}"]);
             } else {
                 Session::flash('errors', ['Erreur lors de l\'envoi de la candidature']);
             }
@@ -190,7 +188,7 @@ class StudentController extends BaseController
         }
 
         $applications = $this->jobApplicationModel->getStudentApplications((int) $user['id']);
-        
+
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['applications' => $applications]);
     }

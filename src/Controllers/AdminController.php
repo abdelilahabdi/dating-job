@@ -39,7 +39,7 @@ class AdminController extends BaseController
         $jobStats = $this->jobOfferModel->getStatistics();
         $companyStats = $this->companyModel->getStatistics();
         $students = $this->studentModel->getAll();
-        
+
         $recentOffers = $this->jobOfferModel->getRecentOffers(3);
         $archivedOffers = $this->jobOfferModel->getArchivedOffers();
         $companies = $this->companyModel->getAll();
@@ -79,7 +79,6 @@ class AdminController extends BaseController
                 'skills' => $_POST['skills'] ?? ''
             ];
 
-            // Validation basique
             if (empty($data['title']) || empty($data['company_id']) || empty($data['contract_type'])) {
                 Session::flash('errors', ['Tous les champs obligatoires doivent être remplis']);
                 $this->redirect('/admin/dashboard');
@@ -156,7 +155,7 @@ class AdminController extends BaseController
                 Session::flash('errors', ['Erreur lors de l\'archivage']);
             }
         }
-        
+
         $this->redirect('/admin/dashboard');
     }
 
@@ -177,7 +176,7 @@ class AdminController extends BaseController
                 Session::flash('errors', ['Erreur lors de la restauration']);
             }
         }
-        
+
         $this->redirect('/admin/dashboard');
     }
 
@@ -206,7 +205,6 @@ class AdminController extends BaseController
                 return;
             }
 
-            // Vérifier unicité email (en excluant l'entreprise actuelle)
             if ($this->companyModel->emailExists($data['email'], $id)) {
                 Session::flash('errors', ['Cet email est déjà utilisé par une autre entreprise']);
                 $this->redirect('/admin/dashboard');
@@ -258,14 +256,14 @@ class AdminController extends BaseController
         $id = $_POST['id'] ?? 0;
         if ($id > 0) {
             $result = $this->companyModel->delete($id);
-            
+
             if ($result) {
                 Session::flash('success', 'Entreprise supprimée avec succès');
             } else {
                 Session::flash('errors', ['Impossible de supprimer cette entreprise. Des annonces y sont probablement associées.']);
             }
         }
-        
+
         $this->redirect('/admin/dashboard');
     }
 
@@ -322,7 +320,7 @@ class AdminController extends BaseController
         }
 
         $studentDetails = $this->jobApplicationModel->getStudentFullDetails($studentId);
-        
+
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['student' => $studentDetails]);
     }
@@ -352,7 +350,7 @@ class AdminController extends BaseController
         }
 
         $success = $this->jobApplicationModel->updateApplicationStatus($applicationId, $status);
-        
+
         header('Content-Type: application/json; charset=utf-8');
         if ($success) {
             echo json_encode(['success' => true, 'message' => 'Statut mis à jour avec succès']);

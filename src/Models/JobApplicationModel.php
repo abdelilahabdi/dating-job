@@ -149,12 +149,11 @@ class JobApplicationModel extends BaseModel
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute(['student_id' => $studentId]);
             $student = $stmt->fetch(PDO::FETCH_ASSOC);
-            
+
             if (!$student) {
                 return [];
             }
 
-            // Récupérer toutes les candidatures de cet étudiant
             $sql = "SELECT ja.*, jo.title as job_title, c.name as company_name
                     FROM {$this->table} ja
                     JOIN job_offers jo ON ja.job_offer_id = jo.id
@@ -176,8 +175,7 @@ class JobApplicationModel extends BaseModel
     public function updateApplicationStatus(int $applicationId, string $status): bool
     {
         $this->lastError = null;
-        
-        // Valider le statut
+
         if (!in_array($status, ['PENDING', 'ACCEPTED', 'REJECTED'])) {
             $this->lastError = 'Statut invalide';
             return false;
